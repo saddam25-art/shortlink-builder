@@ -1,0 +1,17 @@
+{
+  "name": "shortlink-builder",
+  "version": "1.0.0",
+  "description": "Standalone Shortlink Builder - Fetch article metadata, create shortlink with preview, redirect to Shopee affiliate",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "node-fetch": "^2.7.0",
+    "nanoid": "^3.3.7",
+    "cheerio": "^1.0.0-rc.12"
+  }
+}

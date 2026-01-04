@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shortlink Builder - Shopee Affiliate</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .gradient-bg { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #fed7aa 100%); }
+    .card-shadow { box-shadow: 0 10px 40px rgba(0,0,0,0.08); }
+    .btn-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+    .loading { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .toast { animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+  </style>
+</head>
+<body class="min-h-screen gradient-bg">
+  <!-- Header -->
+  <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-orange-100">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl btn-gradient flex items-center justify-center shadow-lg">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-gray-900">Shortlink Builder</h1>
+          <p class="text-xs text-gray-500">Artikel → Shortlink → Shopee Affiliate</p>
+        </div>
+      </div>
+      <button id="btnHistory" class="px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg transition">
+        📋 History
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <!-- Flow Explanation -->
+    <div class="mb-6 p-4 bg-white rounded-2xl card-shadow">
+      <h2 class="font-semibold text-gray-800 mb-2">📌 Flow Penggunaan:</h2>
+      <div class="flex flex-wrap gap-2 text-sm">
+        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full">1. Paste URL Artikel</span>
+        <span class="text-gray-400">→</span>
+        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full">2. Fetch Metadata</span>
+        <span class="text-gray-400">→</span>
+        <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full">3. Paste Shopee Affiliate URL</span>
+        <span class="text-gray-400">→</span>
+        <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full">4. Generate Shortlink</span>
+        <span class="text-gray-400">→</span>
+        <span class="px-3 py-1 bg-pink-100 text-pink-700 rounded-full">5. Share di Facebook</span>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-6">
+      <!-- Input Section -->
+      <div class="bg-white rounded-2xl card-shadow overflow-hidden">
+        <div class="p-4 bg-gradient-to-r from-orange-50 to-white border-b border-orange-100">
+          <h2 class="font-semibold text-orange-900">🔗 Buat Shortlink Baru</h2>
+        </div>
+        
+        <div class="p-5 space-y-5">
+          <!-- Step 1: Article URL -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              1. URL Artikel (untuk preview)
+              <span class="text-red-500">*</span>
+            </label>
+            <div class="flex gap-2">
+              <input 
+                type="url" 
+                id="articleUrl" 
+                class="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
+                placeholder="https://www.mstar.com.my/lokal/viral/..."
+              >
+              <button 
+                id="btnFetch" 
+                class="px-5 py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xl transition whitespace-nowrap"
+              >
+                Fetch
+              </button>
+            </div>
+            <p class="mt-1 text-xs text-gray-400">URL artikel/berita yang title, description & image akan digunakan untuk preview Facebook</p>
+          </div>
+
+          <!-- Fetched Metadata Display -->
+          <div id="metadataBox" class="hidden p-4 bg-green-50 border border-green-200 rounded-xl">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-green-600">✓</span>
+              <span class="text-sm font-medium text-green-800">Metadata Berjaya Diambil:</span>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div><span class="font-medium text-gray-600">Title:</span> <span id="metaTitle" class="text-gray-800">-</span></div>
+              <div><span class="font-medium text-gray-600">Description:</span> <span id="metaDesc" class="text-gray-800">-</span></div>
+              <div><span class="font-medium text-gray-600">Image:</span> <span id="metaImage" class="text-green-600">-</span></div>
+            </div>
+          </div>
+
+          <!-- Step 2: Shopee Affiliate URL -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              2. Shopee Affiliate URL (destination)
+              <span class="text-red-500">*</span>
+            </label>
+            <input 
+              type="url" 
+              id="shopeeUrl" 
+              class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
+              placeholder="https://s.shopee.com.my/... atau https://shopee.com.my/shop/..."
+            >
+            <p class="mt-1 text-xs text-gray-400">URL affiliate Shopee penuh dengan tracking params - user akan redirect ke sini</p>
+          </div>
+
+          <!-- Hidden fields for metadata -->
+          <input type="hidden" id="hiddenTitle">
+          <input type="hidden" id="hiddenDesc">
+          <input type="hidden" id="hiddenImage">
+
+          <!-- Generate Button -->
+          <div class="flex gap-3 pt-2">
+            <button 
+              id="btnGenerate" 
+              class="flex-1 px-6 py-3 btn-gradient text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-orange-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled
+            >
+              🚀 Generate Shortlink
+            </button>
+            <button 
+              id="btnClear" 
+              class="px-4 py-3 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition"
+            >
+              Clear
+            </button>
+          </div>
+
+          <!-- Status -->
+          <div id="status" class="text-sm text-center text-gray-500"></div>
+
+          <!-- Generated Shortlink -->
+          <div id="resultBox" class="hidden p-4 bg-orange-50 border-2 border-orange-200 rounded-xl">
+            <div class="text-sm font-medium text-orange-800 mb-2">🎉 Shortlink Berjaya Dijana!</div>
+            <div class="flex gap-2">
+              <input 
+                type="text" 
+                id="shortlinkOutput" 
+                readonly 
+                class="flex-1 px-3 py-2 bg-white border border-orange-300 rounded-lg font-mono text-sm"
+              >
+              <button 
+                id="btnCopy" 
+                class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition"
+              >
+                Copy
+              </button>
+            </div>
+            <p class="mt-2 text-xs text-orange-700">Share link ini di Facebook. Preview akan paparkan content artikel, bila diklik akan redirect ke Shopee!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview Section -->
+      <div class="bg-white rounded-2xl card-shadow overflow-hidden">
+        <div class="p-4 bg-gradient-to-r from-blue-50 to-white border-b border-blue-100">
+          <h2 class="font-semibold text-blue-900">👁️ Preview Facebook</h2>
+        </div>
+        
+        <div class="p-5">
+          <!-- Facebook Post Mock -->
+          <div class="border border-gray-200 rounded-xl overflow-hidden">
+            <!-- FB Header -->
+            <div class="p-3 flex items-center gap-3 border-b border-gray-100">
+              <div class="w-10 h-10 bg-gray-200 rounded-full"></div>
+              <div>
+                <div class="font-semibold text-sm text-gray-900">Your Page Name</div>
+                <div class="text-xs text-gray-500">Just now · 🌐</div>
+              </div>
+            </div>
+            
+            <!-- Post Text -->
+            <div class="p-3 text-sm text-gray-800">
+              Check out this amazing deal! 🛒🔥
+            </div>
+            
+            <!-- Link Preview -->
+            <div class="border-t border-gray-100">
+              <div id="previewImage" class="h-52 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                <span class="text-gray-400 text-sm">Tiada gambar</span>
+              </div>
+              <div class="p-3 bg-gray-50">
+                <div id="previewDomain" class="text-xs text-gray-500 uppercase tracking-wide">localhost</div>
+                <div id="previewTitle" class="font-semibold text-gray-900 mt-1 line-clamp-2">Tajuk akan dipaparkan di sini</div>
+                <div id="previewDesc" class="text-sm text-gray-600 mt-1 line-clamp-2">Deskripsi preview akan dipaparkan di sini...</div>
+              </div>
+            </div>
+            
+            <!-- FB Actions -->
+            <div class="p-3 border-t border-gray-100 flex justify-around text-gray-500 text-sm">
+              <span>👍 Like</span>
+              <span>💬 Comment</span>
+              <span>↗️ Share</span>
+            </div>
+          </div>
+
+          <!-- Test Button -->
+          <div class="mt-4">
+            <button 
+              id="btnTest" 
+              class="w-full px-4 py-3 bg-green-500 hover:bg-green-600 text-white font-medium rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled
+            >
+              🧪 Test Shortlink (Simulate Click)
+            </button>
+            <p class="mt-2 text-xs text-gray-500 text-center">Test apa yang berlaku bila user klik shortlink</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 class="font-semibold text-gray-900">📋 Shortlink History</h3>
+          <button id="btnCloseHistory" class="p-2 hover:bg-gray-100 rounded-lg transition">✕</button>
+        </div>
+        <div id="historyList" class="p-4 overflow-y-auto max-h-[60vh]">
+          <p class="text-gray-500 text-center py-8">Loading...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-gray-900 text-white text-sm rounded-xl shadow-lg opacity-0 transition-opacity pointer-events-none"></div>
+
+  <script>
+    // Elements
+    const els = {
+      articleUrl: document.getElementById('articleUrl'),
+      shopeeUrl: document.getElementById('shopeeUrl'),
+      btnFetch: document.getElementById('btnFetch'),
+      btnGenerate: document.getElementById('btnGenerate'),
+      btnClear: document.getElementById('btnClear'),
+      btnCopy: document.getElementById('btnCopy'),
+      btnTest: document.getElementById('btnTest'),
+      btnHistory: document.getElementById('btnHistory'),
+      btnCloseHistory: document.getElementById('btnCloseHistory'),
+      metadataBox: document.getElementById('metadataBox'),
+      metaTitle: document.getElementById('metaTitle'),
+      metaDesc: document.getElementById('metaDesc'),
+      metaImage: document.getElementById('metaImage'),
+      hiddenTitle: document.getElementById('hiddenTitle'),
+      hiddenDesc: document.getElementById('hiddenDesc'),
+      hiddenImage: document.getElementById('hiddenImage'),
+      resultBox: document.getElementById('resultBox'),
+      shortlinkOutput: document.getElementById('shortlinkOutput'),
+      status: document.getElementById('status'),
+      previewImage: document.getElementById('previewImage'),
+      previewDomain: document.getElementById('previewDomain'),
+      previewTitle: document.getElementById('previewTitle'),
+      previewDesc: document.getElementById('previewDesc'),
+      historyModal: document.getElementById('historyModal'),
+      historyList: document.getElementById('historyList'),
+      toast: document.getElementById('toast')
+    };
+
+    let currentShortlink = null;
+
+    // Toast notification
+    function toast(msg) {
+      els.toast.textContent = msg;
+      els.toast.style.opacity = '1';
+      els.toast.classList.add('toast');
+      setTimeout(() => {
+        els.toast.style.opacity = '0';
+        els.toast.classList.remove('toast');
+      }, 2000);
+    }
+
+    // Status message
+    function setStatus(msg, type = 'info') {
+      const colors = {
+        info: 'text-gray-500',
+        success: 'text-green-600',
+        error: 'text-red-600',
+        loading: 'text-blue-600'
+      };
+      els.status.className = `text-sm text-center ${colors[type] || colors.info}`;
+      els.status.textContent = msg;
+    }
+
+    // Copy to clipboard
+    async function copyToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast('Copied!');
+      } catch {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        toast('Copied!');
+      }
+    }
+
+    // Update preview
+    function updatePreview() {
+      const title = els.hiddenTitle.value || 'Tajuk akan dipaparkan di sini';
+      const desc = els.hiddenDesc.value || 'Deskripsi preview akan dipaparkan di sini...';
+      const image = els.hiddenImage.value;
+
+      els.previewTitle.textContent = title;
+      els.previewDesc.textContent = desc;
+
+      if (image) {
+        els.previewImage.innerHTML = `<img src="${image}" alt="Preview" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\\'text-gray-400 text-sm\\'>Gambar gagal dimuatkan</span>'">`;
+      } else {
+        els.previewImage.innerHTML = '<span class="text-gray-400 text-sm">Tiada gambar</span>';
+      }
+
+      // Update domain
+      try {
+        const url = new URL(window.location.href);
+        els.previewDomain.textContent = url.host;
+      } catch {}
+    }
+
+    // Check if can generate
+    function checkCanGenerate() {
+      const hasMetadata = els.hiddenTitle.value || els.hiddenDesc.value || els.hiddenImage.value;
+      const hasShopeeUrl = els.shopeeUrl.value.trim();
+      els.btnGenerate.disabled = !(hasMetadata && hasShopeeUrl);
+    }
+
+    // Fetch metadata from article URL
+    async function fetchMetadata() {
+      const url = els.articleUrl.value.trim();
+      
+      if (!url) {
+        setStatus('Sila masukkan URL artikel!', 'error');
+        return;
+      }
+
+      try {
+        new URL(url);
+      } catch {
+        setStatus('URL tidak valid!', 'error');
+        return;
+      }
+
+      els.btnFetch.disabled = true;
+      els.btnFetch.textContent = 'Loading...';
+      setStatus('Fetching metadata...', 'loading');
+
+      try {
+        const response = await fetch('/api/fetch-metadata', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch');
+        }
+
+        // Store metadata
+        els.hiddenTitle.value = data.title || '';
+        els.hiddenDesc.value = data.description || '';
+        els.hiddenImage.value = data.image || '';
+
+        // Display metadata
+        els.metaTitle.textContent = data.title || '-';
+        els.metaDesc.textContent = data.description ? (data.description.substring(0, 100) + '...') : '-';
+        els.metaImage.textContent = data.image ? '✓ Image found' : '-';
+        els.metadataBox.classList.remove('hidden');
+
+        // Update preview
+        updatePreview();
+        checkCanGenerate();
+
+        const count = [data.title, data.description, data.image].filter(Boolean).length;
+        setStatus(`✓ Berjaya fetch ${count} metadata!`, 'success');
+
+      } catch (error) {
+        console.error('Fetch error:', error);
+        setStatus('Gagal fetch metadata: ' + error.message, 'error');
+      } finally {
+        els.btnFetch.disabled = false;
+        els.btnFetch.textContent = 'Fetch';
+      }
+    }
+
+    // Generate shortlink
+    async function generateShortlink() {
+      const shopeeUrl = els.shopeeUrl.value.trim();
+      
+      if (!shopeeUrl) {
+        setStatus('Sila masukkan Shopee URL!', 'error');
+        return;
+      }
+
+      els.btnGenerate.disabled = true;
+      setStatus('Generating shortlink...', 'loading');
+
+      try {
+        const response = await fetch('/api/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: els.hiddenTitle.value,
+            description: els.hiddenDesc.value,
+            image: els.hiddenImage.value,
+            sourceUrl: els.articleUrl.value.trim(),
+            destinationUrl: shopeeUrl
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create');
+        }
+
+        currentShortlink = data.shortUrl;
+        els.shortlinkOutput.value = data.shortUrl;
+        els.resultBox.classList.remove('hidden');
+        els.btnTest.disabled = false;
+
+        setStatus('🎉 Shortlink berjaya dijana!', 'success');
+        toast('Shortlink created!');
+
+      } catch (error) {
+        console.error('Generate error:', error);
+        setStatus('Gagal generate: ' + error.message, 'error');
+      } finally {
+        els.btnGenerate.disabled = false;
+        checkCanGenerate();
+      }
+    }
+
+    // Clear all
+    function clearAll() {
+      els.articleUrl.value = '';
+      els.shopeeUrl.value = '';
+      els.hiddenTitle.value = '';
+      els.hiddenDesc.value = '';
+      els.hiddenImage.value = '';
+      els.metadataBox.classList.add('hidden');
+      els.resultBox.classList.add('hidden');
+      els.btnTest.disabled = true;
+      currentShortlink = null;
+      updatePreview();
+      checkCanGenerate();
+      setStatus('');
+    }
+
+    // Load history
+    async function loadHistory() {
+      els.historyList.innerHTML = '<p class="text-gray-500 text-center py-8">Loading...</p>';
+      els.historyModal.classList.remove('hidden');
+
+      try {
+        const response = await fetch('/api/links');
+        const links = await response.json();
+
+        if (links.length === 0) {
+          els.historyList.innerHTML = '<p class="text-gray-500 text-center py-8">Tiada shortlink lagi.</p>';
+          return;
+        }
+
+        els.historyList.innerHTML = links.map(link => `
+          <div class="p-4 border border-gray-200 rounded-xl mb-3 hover:bg-gray-50">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-gray-900 truncate">${escapeHtml(link.title || 'No title')}</div>
+                <div class="text-sm text-gray-500 truncate mt-1">${escapeHtml(link.description || 'No description')}</div>
+                <div class="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                  <span>📊 ${link.clicks} clicks</span>
+                  <span>📅 ${new Date(link.created_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+              <div class="flex flex-col gap-2">
+                <button onclick="copyToClipboard('${window.location.origin}/s/${link.code}')" class="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-lg hover:bg-orange-200">
+                  Copy
+                </button>
+                <button onclick="deleteLink('${link.code}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-lg hover:bg-red-200">
+                  Delete
+                </button>
+              </div>
+            </div>
+            <div class="mt-2 p-2 bg-gray-100 rounded-lg">
+              <code class="text-xs text-gray-600 break-all">${window.location.origin}/s/${link.code}</code>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (error) {
+        els.historyList.innerHTML = '<p class="text-red-500 text-center py-8">Gagal load history.</p>';
+      }
+    }
+
+    // Delete link
+    async function deleteLink(code) {
+      if (!confirm('Padam shortlink ini?')) return;
+      
+      try {
+        await fetch(`/api/links/${code}`, { method: 'DELETE' });
+        toast('Deleted!');
+        loadHistory();
+      } catch {
+        toast('Gagal padam');
+      }
+    }
+
+    // Escape HTML
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // Event listeners
+    els.btnFetch.addEventListener('click', fetchMetadata);
+    els.btnGenerate.addEventListener('click', generateShortlink);
+    els.btnClear.addEventListener('click', clearAll);
+    els.btnCopy.addEventListener('click', () => copyToClipboard(els.shortlinkOutput.value));
+    els.btnTest.addEventListener('click', () => {
+      if (currentShortlink) {
+        window.open(currentShortlink, '_blank');
+      }
+    });
+    els.btnHistory.addEventListener('click', loadHistory);
+    els.btnCloseHistory.addEventListener('click', () => els.historyModal.classList.add('hidden'));
+    els.historyModal.addEventListener('click', (e) => {
+      if (e.target === els.historyModal) els.historyModal.classList.add('hidden');
+    });
+
+    // Input listeners
+    els.shopeeUrl.addEventListener('input', checkCanGenerate);
+    els.articleUrl.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') fetchMetadata();
+    });
+
+    // Initialize
+    updatePreview();
+  </script>
+</body>
+</html>

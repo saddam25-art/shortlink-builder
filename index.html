@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <!-- Dynamic OG Meta Tags for Facebook Preview -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" id="og-title" content="Shopee Malaysia" />
+  <meta property="og:description" id="og-desc" content="Beli di Shopee dengan harga terbaik!" />
+  <meta property="og:image" id="og-image" content="" />
+  <meta property="og:url" id="og-url" content="" />
+  <meta property="fb:app_id" content="222039178820089" />
+  
+  <title>Shopee Shortlink Builder</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    :root{color-scheme: light;}
+    .mono { font-variant-ligatures: none; }
+    .shadow-soft { box-shadow: 0 12px 30px rgba(2,6,23,.08); }
+    .scrollbar-thin::-webkit-scrollbar{height:8px;width:8px}
+    .scrollbar-thin::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px}
+    .scrollbar-thin::-webkit-scrollbar-track{background:transparent}
+    #toast { transition: opacity 0.3s ease; }
+    .loading { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur">
+    <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 rounded-xl bg-orange-500 text-white grid place-items-center shadow-soft">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-semibold leading-tight">Shopee Shortlink Builder</h1>
+          <p class="text-xs text-slate-500">Buat shortlink dengan preview → Direct ke Shopee App dari Facebook</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-6">
+    <!-- Landing Page Mode - bila user klik shortlink -->
+    <section id="landingPage" class="hidden">
+      <div class="max-w-lg mx-auto">
+        <div id="landingPreview" class="rounded-2xl border border-slate-200 bg-white shadow-soft overflow-hidden">
+          <!-- Preview content will be injected here -->
+        </div>
+        <div class="mt-4 text-center">
+          <p class="text-xs text-slate-500">Redirecting ke Shopee App...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Builder Mode -->
+    <div id="builder" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Input Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white shadow-soft overflow-hidden">
+        <div class="p-4 border-b border-slate-100 bg-gradient-to-r from-orange-50 to-white">
+          <h2 class="font-semibold text-orange-900">1) Masukkan URL</h2>
+          <p class="text-sm text-slate-500">Hanya 2 input - sistem akan auto-fetch preview data</p>
+        </div>
+        <div class="p-4 space-y-4">
+          <!-- URL Content untuk Fetch Preview -->
+          <label class="block">
+            <div class="text-xs font-medium text-slate-700 mb-1">URL Content (untuk fetch image & preview) <span class="text-red-500">*</span></div>
+            <div class="flex gap-2">
+              <input id="contentUrlInput" class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="https://shopee.com.my/product/..." />
+              <button id="btnFetch" class="rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600 cursor-pointer transition-colors whitespace-nowrap">
+                Fetch
+              </button>
+            </div>
+            <p class="mt-1 text-xs text-slate-400">URL produk/shop Shopee untuk ambil gambar, title & description</p>
+          </label>
+
+          <!-- Final URL Destination -->
+          <label class="block">
+            <div class="text-xs font-medium text-slate-700 mb-1">Final URL Destination (URL untuk redirect) <span class="text-red-500">*</span></div>
+            <input id="finalUrlInput" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500" placeholder="https://shopee.com.my/shop/123456?utm_source=..." />
+            <p class="mt-1 text-xs text-slate-400">URL affiliate penuh dengan tracking params (user akan redirect ke sini)</p>
+          </label>
+
+          <!-- Hidden fields for fetched data -->
+          <input type="hidden" id="previewTitle" />
+          <input type="hidden" id="previewDesc" />
+          <input type="hidden" id="previewImage" />
+
+          <!-- Fetched Preview Info -->
+          <div id="fetchedInfo" class="hidden rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+            <div class="text-xs font-medium text-emerald-800 mb-2">✓ Preview Data (Auto-fetched):</div>
+            <div class="space-y-1 text-xs text-emerald-700">
+              <div><strong>Title:</strong> <span id="fetchedTitle">-</span></div>
+              <div><strong>Desc:</strong> <span id="fetchedDesc">-</span></div>
+              <div><strong>Image:</strong> <span id="fetchedImage">-</span></div>
+            </div>
+          </div>
+
+          <!-- Generated HTML File Section -->
+          <div id="htmlFileSection" class="hidden rounded-xl border-2 border-blue-200 bg-blue-50 p-4">
+            <div class="text-xs font-medium text-blue-800 mb-2">📄 Download Redirect Page:</div>
+            <p class="text-xs text-blue-700 mb-3">Download fail HTML ini dan upload ke hosting anda. Bila share link fail ini di Facebook, preview akan muncul dan auto-redirect ke Shopee.</p>
+            <button id="btnDownloadHtml" class="w-full rounded-lg bg-blue-500 px-3 py-2 text-sm font-medium text-white hover:bg-blue-600 cursor-pointer">
+              Download HTML File
+            </button>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex flex-wrap gap-2 pt-2">
+            <button id="btnGenerate" class="flex-1 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-600 cursor-pointer transition-colors">
+              Generate Shortlink
+            </button>
+            <button id="btnExample" class="rounded-xl border border-orange-300 bg-orange-50 px-4 py-2.5 text-sm text-orange-700 hover:bg-orange-100 cursor-pointer">
+              Contoh
+            </button>
+            <button id="btnClear" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm hover:bg-slate-50 cursor-pointer">
+              Clear
+            </button>
+          </div>
+
+          <div id="status" class="text-sm text-slate-500 text-center"></div>
+
+          <!-- Generated Shortlink -->
+          <div id="shortlinkSection" class="hidden rounded-xl border-2 border-orange-200 bg-orange-50 p-4">
+            <div class="text-xs font-medium text-orange-800 mb-2">Shortlink Anda (Share di Facebook):</div>
+            <div class="flex gap-2 items-center">
+              <input id="shortlinkOutput" readonly class="flex-1 rounded-lg border border-orange-300 bg-white px-3 py-2 text-sm font-mono" />
+              <button id="btnCopyShortlink" class="rounded-lg bg-orange-500 px-3 py-2 text-sm font-medium text-white hover:bg-orange-600 cursor-pointer">
+                Copy
+              </button>
+            </div>
+            <p class="mt-2 text-xs text-orange-700">Share link ini di Facebook. Bila diklik, akan terus buka Shopee App!</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Preview Section -->
+      <section class="rounded-2xl border border-slate-200 bg-white shadow-soft overflow-hidden">
+        <div class="p-4 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-white">
+          <h2 class="font-semibold text-blue-900">2) Preview</h2>
+          <p class="text-sm text-slate-500">Begini rupa bila share di Facebook</p>
+        </div>
+        <div class="p-4">
+          <!-- Facebook Preview Mock -->
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div class="text-xs text-slate-500 mb-2">Facebook Preview:</div>
+            <div id="fbPreview" class="rounded-lg border border-slate-200 bg-white overflow-hidden">
+              <div id="previewImageBox" class="h-48 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                <span class="text-slate-400 text-sm">Tiada gambar</span>
+              </div>
+              <div class="p-3 border-t border-slate-100">
+                <div class="text-xs text-slate-500 uppercase tracking-wide" id="previewDomain">shopee.com.my</div>
+                <div class="font-semibold text-slate-900 mt-1" id="previewTitleDisplay">Tajuk Preview</div>
+                <div class="text-sm text-slate-600 mt-1 line-clamp-2" id="previewDescDisplay">Deskripsi preview akan dipaparkan di sini...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Click Preview -->
+          <div class="mt-4 rounded-xl border border-slate-200 p-4">
+            <div class="text-xs font-medium text-slate-700 mb-2">Test Shortlink:</div>
+            <button id="btnTestLink" class="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled>
+              🛒 Klik untuk Test → Buka Shopee App
+            </button>
+            <p class="mt-2 text-xs text-slate-500 text-center">Simulasi apa yang berlaku bila user klik shortlink</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="mt-10 pb-10 text-center text-xs text-slate-500">
+      Shortlink akan direct terus ke Shopee App. Jika app tidak dipasang, akan buka web Shopee.
+    </footer>
+  </main>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+
+    // Elements
+    const els = {
+      landingPage: $('#landingPage'),
+      landingPreview: $('#landingPreview'),
+      builder: $('#builder'),
+      contentUrlInput: $('#contentUrlInput'),
+      finalUrlInput: $('#finalUrlInput'),
+      previewTitle: $('#previewTitle'),
+      previewDesc: $('#previewDesc'),
+      previewImage: $('#previewImage'),
+      fetchedInfo: $('#fetchedInfo'),
+      fetchedTitle: $('#fetchedTitle'),
+      fetchedDesc: $('#fetchedDesc'),
+      fetchedImage: $('#fetchedImage'),
+      btnGenerate: $('#btnGenerate'),
+      btnClear: $('#btnClear'),
+      status: $('#status'),
+      shortlinkSection: $('#shortlinkSection'),
+      shortlinkOutput: $('#shortlinkOutput'),
+      btnCopyShortlink: $('#btnCopyShortlink'),
+      previewImageBox: $('#previewImageBox'),
+      previewDomain: $('#previewDomain'),
+      previewTitleDisplay: $('#previewTitleDisplay'),
+      previewDescDisplay: $('#previewDescDisplay'),
+      btnTestLink: $('#btnTestLink'),
+      btnExample: $('#btnExample'),
+      btnFetch: $('#btnFetch'),
+      htmlFileSection: $('#htmlFileSection'),
+      btnDownloadHtml: $('#btnDownloadHtml'),
+    };
+
+    let currentData = null;
+    let isFetching = false;
+
+    // Toast notification
+    let toastTimer;
+    function toast(msg){
+      let el = document.getElementById('toast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'toast';
+        el.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-slate-900 text-white text-sm px-3 py-2 shadow-soft';
+        document.body.appendChild(el);
+      }
+      el.textContent = msg;
+      el.style.opacity = '1';
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { el.style.opacity = '0'; }, 1800);
+    }
+
+    // Copy to clipboard
+    async function copyText(text){
+      try{
+        await navigator.clipboard.writeText(text);
+        toast('Copied!');
+      } catch {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        toast('Copied!');
+      }
+    }
+
+    // Status message
+    function setStatus(msg, kind='info'){
+      const colors = { info: 'text-slate-500', ok: 'text-emerald-600', err: 'text-rose-600', warn: 'text-amber-700' };
+      els.status.className = `text-sm text-center ${colors[kind]||colors.info}`;
+      els.status.textContent = msg;
+    }
+
+    // Normalize URL
+    function normalizeUrl(s){
+      s = String(s||'').trim();
+      if (!s) return '';
+      if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
+      return s;
+    }
+
+    // Check if valid URL
+    function isValidUrl(s){
+      try { new URL(s); return true; } catch { return false; }
+    }
+
+    // Escape HTML
+    function escapeHtml(str){
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Build Shopee deep link
+    function buildShopeeDeepLink(url){
+      if (!url) return '';
+      return 'shopee://open?url=' + encodeURIComponent(url);
+    }
+
+    // Generate standalone HTML redirect file (like Facebook's l.php)
+    function generateRedirectHtml(data){
+      const { finalUrl, title, desc, image } = data;
+      const deepLink = buildShopeeDeepLink(finalUrl);
+      const safeTitle = escapeHtml(title || '');
+      const safeDesc = escapeHtml(desc || '');
+      const safeImage = escapeHtml(image || '');
+      const safeFinalUrl = escapeHtml(finalUrl || '');
+      
+      const imgTag = image ? '<img src="' + safeImage + '" alt="' + safeTitle + '" class="img" onerror="this.style.display=\'none\'">' : '';
+      
+      return '<!DOCTYPE html>\n' +
+'<html lang="ms">\n' +
+'<head>\n' +
+'  <meta charset="UTF-8">\n' +
+'  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+'  <meta http-equiv="refresh" content="1;URL=' + safeFinalUrl + '">\n' +
+'  <meta property="og:type" content="website">\n' +
+'  <meta property="og:title" content="' + safeTitle + '">\n' +
+'  <meta property="og:description" content="' + safeDesc + '">\n' +
+'  <meta property="og:image" content="' + safeImage + '">\n' +
+'  <meta property="fb:app_id" content="222039178820089">\n' +
+'  <meta name="title" content="' + safeTitle + '">\n' +
+'  <meta name="description" content="' + safeDesc + '">\n' +
+'  <title>' + safeTitle + '</title>\n' +
+'  <style>\n' +
+'    *{margin:0;padding:0;box-sizing:border-box}\n' +
+'    body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f8fafc;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}\n' +
+'    .card{background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);max-width:400px;width:100%;overflow:hidden}\n' +
+'    .img{width:100%;height:200px;object-fit:cover;background:#f1f5f9}\n' +
+'    .content{padding:20px}\n' +
+'    h1{font-size:18px;color:#1e293b;margin-bottom:8px}\n' +
+'    p{font-size:14px;color:#64748b;margin-bottom:16px}\n' +
+'    .loading{display:flex;align-items:center;justify-content:center;gap:8px;color:#f97316;font-size:14px}\n' +
+'    .spinner{width:20px;height:20px;border:2px solid #fed7aa;border-top-color:#f97316;border-radius:50%;animation:spin 1s linear infinite}\n' +
+'    @keyframes spin{to{transform:rotate(360deg)}}\n' +
+'    .btn{display:block;width:100%;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;margin-top:12px}\n' +
+'    .btn-primary{background:#f97316;color:#fff}\n' +
+'  </style>\n' +
+'</head>\n' +
+'<body>\n' +
+'  <div class="card">\n' +
+'    ' + imgTag + '\n' +
+'    <div class="content">\n' +
+'      <h1>' + safeTitle + '</h1>\n' +
+'      <p>' + safeDesc + '</p>\n' +
+'      <div class="loading"><div class="spinner"></div><span>Redirecting ke Shopee...</span></div>\n' +
+'      <a href="' + safeFinalUrl + '" class="btn btn-primary">Buka Shopee</a>\n' +
+'    </div>\n' +
+'  </div>\n' +
+'  <script>\n' +
+'    (function(){\n' +
+'      var finalUrl = ' + JSON.stringify(finalUrl) + ';\n' +
+'      var deepLink = ' + JSON.stringify(deepLink) + ';\n' +
+'      var ua = navigator.userAgent || "";\n' +
+'      var isAndroid = /android/i.test(ua);\n' +
+'      var isIOS = /iphone|ipad|ipod/i.test(ua);\n' +
+'      function tryOpenApp(){\n' +
+'        if(isAndroid){\n' +
+'          var intentUrl = "intent://open?url=" + encodeURIComponent(finalUrl) + "#Intent;scheme=shopee;package=com.shopee.my;S.browser_fallback_url=" + encodeURIComponent(finalUrl) + ";end";\n' +
+'          window.location.href = intentUrl;\n' +
+'        } else if(isIOS){\n' +
+'          window.location.href = deepLink;\n' +
+'          setTimeout(function(){ if(!document.hidden) window.location.href = finalUrl; }, 1500);\n' +
+'        } else {\n' +
+'          window.location.href = finalUrl;\n' +
+'        }\n' +
+'      }\n' +
+'      setTimeout(tryOpenApp, 100);\n' +
+'    })();\n' +
+'  </' + 'script>\n' +
+'</body>\n' +
+'</html>';
+    }
+
+    // Download HTML file
+    function downloadHtmlFile(filename, content){
+      const blob = new Blob([content], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Fetch preview data from URL (title, description, image)
+    async function fetchPreviewData(url){
+      if (isFetching) return;
+      
+      if (!url || !isValidUrl(url)) {
+        setStatus('Sila masukkan URL Content yang valid!', 'err');
+        return;
+      }
+
+      isFetching = true;
+      els.btnFetch.disabled = true;
+      els.btnFetch.textContent = 'Loading...';
+      els.btnFetch.classList.add('opacity-50');
+      setStatus('Fetching preview data...', 'info');
+
+      try {
+        // Use AllOrigins proxy to bypass CORS
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+        const response = await fetch(proxyUrl);
+        
+        if (!response.ok) throw new Error('Fetch failed');
+        
+        const data = await response.json();
+        const html = data.contents || '';
+        
+        // Parse HTML to extract meta tags
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        // Extract OG meta tags (priority) or fallback to regular meta/title
+        const ogTitle = doc.querySelector('meta[property="og:title"]')?.content 
+                     || doc.querySelector('meta[name="title"]')?.content
+                     || doc.querySelector('title')?.textContent
+                     || '';
+        
+        const ogDesc = doc.querySelector('meta[property="og:description"]')?.content
+                    || doc.querySelector('meta[name="description"]')?.content
+                    || '';
+        
+        const ogImage = doc.querySelector('meta[property="og:image"]')?.content
+                     || doc.querySelector('meta[property="og:image:url"]')?.content
+                     || '';
+
+        // Fill in the hidden form fields
+        els.previewTitle.value = ogTitle.trim();
+        els.previewDesc.value = ogDesc.trim();
+        els.previewImage.value = ogImage.trim();
+        
+        // Show fetched info
+        els.fetchedInfo.classList.remove('hidden');
+        els.fetchedTitle.textContent = ogTitle.trim() || '-';
+        els.fetchedDesc.textContent = ogDesc.trim() ? (ogDesc.trim().substring(0, 80) + '...') : '-';
+        els.fetchedImage.textContent = ogImage.trim() ? '✓ Image found' : '-';
+        
+        // Update preview display
+        updatePreview();
+        
+        const found = [ogTitle, ogDesc, ogImage].filter(Boolean).length;
+        if (found > 0) {
+          setStatus(`✓ Berjaya fetch ${found} item! Sekarang klik Generate Shortlink.`, 'ok');
+        } else {
+          setStatus('Tiada meta data dijumpai dari URL ini.', 'warn');
+        }
+        
+      } catch (err) {
+        console.error('Fetch error:', err);
+        setStatus('Gagal fetch data. Pastikan URL betul.', 'err');
+      } finally {
+        isFetching = false;
+        els.btnFetch.disabled = false;
+        els.btnFetch.textContent = 'Fetch';
+        els.btnFetch.classList.remove('opacity-50');
+      }
+    }
+
+    // Build hash payload for shortlink
+    function buildHashPayload(data){
+      const payload = {
+        v: 2,
+        url: data.finalUrl,
+        title: data.title || '',
+        desc: data.desc || '',
+        img: data.image || '',
+        ts: Date.now()
+      };
+      const json = JSON.stringify(payload);
+      const b64 = btoa(unescape(encodeURIComponent(json)));
+      return 'd=' + b64;
+    }
+
+    // Read hash payload from URL
+    function readHashPayload(){
+      const h = location.hash || '';
+      const m = h.match(/#?d=([^&]+)/);
+      if (!m) return null;
+      try{
+        const json = decodeURIComponent(escape(atob(m[1])));
+        const data = JSON.parse(json);
+        if (!data || typeof data !== 'object') return null;
+        return data;
+      } catch { return null; }
+    }
+
+    // Update live preview
+    function updatePreview(){
+      const title = els.previewTitle.value.trim() || 'Tajuk Preview';
+      const desc = els.previewDesc.value.trim() || 'Deskripsi preview akan dipaparkan di sini...';
+      const image = els.previewImage.value.trim();
+      const finalUrl = normalizeUrl(els.finalUrlInput.value);
+      
+      // Update preview display
+      els.previewTitleDisplay.textContent = title;
+      els.previewDescDisplay.textContent = desc;
+      
+      // Update domain
+      try {
+        const u = new URL(finalUrl);
+        els.previewDomain.textContent = u.hostname;
+      } catch {
+        els.previewDomain.textContent = 'shopee.com.my';
+      }
+      
+      // Update image
+      if (image && isValidUrl(image)) {
+        els.previewImageBox.innerHTML = `<img src="${escapeHtml(image)}" alt="Preview" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\\'text-slate-400 text-sm\\'>Gambar tidak dapat dimuatkan</span>'" />`;
+      } else {
+        els.previewImageBox.innerHTML = '<span class="text-slate-400 text-sm">Tiada gambar</span>';
+      }
+    }
+
+    // Generate shortlink
+    function generateShortlink(){
+      const finalUrl = normalizeUrl(els.finalUrlInput.value);
+      
+      if (!finalUrl) {
+        setStatus('Sila masukkan Final URL Destination!', 'err');
+        return;
+      }
+      
+      if (!isValidUrl(finalUrl)) {
+        setStatus('URL tidak valid!', 'err');
+        return;
+      }
+
+      const data = {
+        finalUrl: finalUrl,
+        title: els.previewTitle.value.trim(),
+        desc: els.previewDesc.value.trim(),
+        image: els.previewImage.value.trim()
+      };
+
+      currentData = data;
+
+      // Build shortlink
+      const hash = buildHashPayload(data);
+      const shortlink = location.origin + location.pathname + '#' + hash;
+      
+      // Show shortlink section
+      els.shortlinkSection.classList.remove('hidden');
+      els.shortlinkOutput.value = shortlink;
+      els.btnTestLink.disabled = false;
+      
+      // Show HTML file download section
+      els.htmlFileSection.classList.remove('hidden');
+      
+      // Update OG meta tags (for when page is shared)
+      document.getElementById('og-title').content = data.title || 'Shopee Product';
+      document.getElementById('og-desc').content = data.desc || 'Klik untuk lihat produk di Shopee';
+      document.getElementById('og-image').content = data.image || '';
+      document.getElementById('og-url').content = shortlink;
+      
+      setStatus('Shortlink berjaya dijana! Download HTML file untuk share di Facebook.', 'ok');
+    }
+
+    // Clear all inputs
+    function clearAll(){
+      els.contentUrlInput.value = '';
+      els.finalUrlInput.value = '';
+      els.previewTitle.value = '';
+      els.previewDesc.value = '';
+      els.previewImage.value = '';
+      els.shortlinkSection.classList.add('hidden');
+      els.shortlinkOutput.value = '';
+      els.btnTestLink.disabled = true;
+      els.fetchedInfo.classList.add('hidden');
+      els.htmlFileSection.classList.add('hidden');
+      currentData = null;
+      updatePreview();
+      setStatus('', 'info');
+    }
+
+    // Open Shopee app directly (no permission needed)
+    function openShopeeApp(finalUrl){
+      const deepLink = buildShopeeDeepLink(finalUrl);
+      
+      // Detect device
+      const ua = navigator.userAgent || '';
+      const isAndroid = /android/i.test(ua);
+      const isIOS = /iphone|ipad|ipod/i.test(ua);
+      const isFacebookApp = /FBAN|FBAV|FB_IAB/i.test(ua);
+      
+      // For Android - use intent URL (works best from Facebook app)
+      if (isAndroid) {
+        const intentUrl = `intent://open?url=${encodeURIComponent(finalUrl)}#Intent;scheme=shopee;package=com.shopee.my;S.browser_fallback_url=${encodeURIComponent(finalUrl)};end`;
+        
+        // Try intent first
+        window.location.href = intentUrl;
+        
+        // Fallback after delay
+        setTimeout(() => {
+          if (!document.hidden) {
+            window.location.href = finalUrl;
+          }
+        }, 2000);
+        return;
+      }
+      
+      // For iOS - use universal link or deep link
+      if (isIOS) {
+        // Try deep link
+        window.location.href = deepLink;
+        
+        // Fallback after delay
+        setTimeout(() => {
+          if (!document.hidden) {
+            window.location.href = finalUrl;
+          }
+        }, 1500);
+        return;
+      }
+      
+      // Desktop or other - try deep link with iframe trick
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = deepLink;
+      document.body.appendChild(iframe);
+      
+      setTimeout(() => {
+        window.location.href = deepLink;
+      }, 100);
+      
+      setTimeout(() => {
+        iframe.remove();
+        if (!document.hidden) {
+          window.location.href = finalUrl;
+        }
+      }, 1500);
+    }
+
+    // Landing page mode - when user clicks shortlink (like l.facebook.com redirect)
+    // This mimics how Facebook's l.php works with "refresh: 1;URL=..." header
+    function enterLandingMode(payload){
+      els.builder.classList.add('hidden');
+      els.landingPage.classList.remove('hidden');
+      
+      const finalUrl = payload.url || '';
+      const title = payload.title || 'Shopee Product';
+      const desc = payload.desc || 'Klik untuk lihat produk';
+      const image = payload.img || '';
+      
+      // Update page title
+      document.title = title + ' - Shopee';
+      
+      // Update OG tags for Facebook crawler
+      document.getElementById('og-title').content = title;
+      document.getElementById('og-desc').content = desc;
+      document.getElementById('og-image').content = image;
+      
+      // Add meta refresh tag (like Facebook's l.php does)
+      // This will auto-redirect after 0 seconds
+      const metaRefresh = document.createElement('meta');
+      metaRefresh.httpEquiv = 'refresh';
+      metaRefresh.content = `0;URL=${finalUrl}`;
+      document.head.appendChild(metaRefresh);
+      
+      // Render landing preview (shows very briefly before redirect)
+      const imgHtml = image 
+        ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(title)}" class="w-full h-56 object-cover" onerror="this.style.display='none'" />`
+        : `<div class="w-full h-56 bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center"><svg class="w-16 h-16 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg></div>`;
+      
+      els.landingPreview.innerHTML = `
+        ${imgHtml}
+        <div class="p-4">
+          <h2 class="font-bold text-lg text-slate-900">${escapeHtml(title)}</h2>
+          <p class="mt-2 text-sm text-slate-600">${escapeHtml(desc)}</p>
+          <div class="mt-3 text-center">
+            <div class="inline-flex items-center gap-2 text-orange-600">
+              <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              <span class="text-sm font-medium">Redirecting...</span>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // IMMEDIATE REDIRECT - like Facebook's l.facebook.com/l.php
+      // Try Shopee app first, fallback to web
+      openShopeeApp(finalUrl);
+    }
+
+    // Event listeners
+    els.btnGenerate.addEventListener('click', generateShortlink);
+    els.btnClear.addEventListener('click', clearAll);
+    els.btnCopyShortlink.addEventListener('click', () => {
+      copyText(els.shortlinkOutput.value);
+    });
+    
+    els.btnTestLink.addEventListener('click', () => {
+      if (currentData) {
+        openShopeeApp(currentData.finalUrl);
+      }
+    });
+
+    // Fetch button - auto-capture preview data from URL Content
+    els.btnFetch.addEventListener('click', () => {
+      const url = normalizeUrl(els.contentUrlInput.value);
+      fetchPreviewData(url);
+    });
+
+    // Example button - fill with sample affiliate data
+    els.btnExample.addEventListener('click', () => {
+      // URL Content untuk fetch preview
+      els.contentUrlInput.value = 'https://shopee.com.my/shop/390216056';
+      // Final URL dengan tracking params
+      els.finalUrlInput.value = 'https://shopee.com.my/shop/390216056?channel_type=fb&utm_source=an_12370350031&utm_medium=affiliates';
+      // Auto fetch preview
+      fetchPreviewData('https://shopee.com.my/shop/390216056');
+      setStatus('Contoh dimasukkan. Tunggu fetch selesai, kemudian klik Generate Shortlink.', 'info');
+    });
+
+    // Download HTML file button
+    els.btnDownloadHtml.addEventListener('click', () => {
+      if (!currentData) {
+        setStatus('Sila generate shortlink dahulu!', 'err');
+        return;
+      }
+      const htmlContent = generateRedirectHtml({
+        finalUrl: currentData.finalUrl,
+        title: currentData.title || 'Shopee Product',
+        desc: currentData.desc || 'Klik untuk lihat produk di Shopee',
+        image: currentData.image || ''
+      });
+      const filename = 'shopee-redirect-' + Date.now() + '.html';
+      downloadHtmlFile(filename, htmlContent);
+      toast('HTML file downloaded!');
+    });
+
+    // Live preview updates
+    els.finalUrlInput.addEventListener('input', updatePreview);
+
+    // Initialize
+    (function init(){
+      const payload = readHashPayload();
+      if (payload?.url) {
+        // Landing mode - user clicked shortlink
+        enterLandingMode(payload);
+      } else {
+        // Builder mode
+        updatePreview();
+      }
+    })();
+  </script>
+</body>
+</html>
