@@ -25,55 +25,47 @@ jobs:
         password: ${{ secrets.SERVER_PASSWORD }}
         port: 22
         script: |
-          Write-Host "Starting Windows deployment..."
+          echo Starting Windows deployment...
           
-          if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-            Write-Host "Installing Node.js..."
-            $url = "https://nodejs.org/dist/v20.12.2/node-v20.12.2-x64.msi"
-            $output = "C:\node-installer.msi"
-            Invoke-WebRequest -Uri $url -OutFile $output
-            Start-Process msiexec.exe -ArgumentList "/i $output /quiet" -Wait
-            Remove-Item $output
-            $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
-            Write-Host "Node.js installed"
-          }
+          where node >nul 2>nul
+          if %errorlevel% neq 0 (
+            echo Installing Node.js...
+            powershell -Command "$url = 'https://nodejs.org/dist/v20.12.2/node-v20.12.2-x64.msi'; $output = 'C:\node-installer.msi'; Invoke-WebRequest -Uri $url -OutFile $output; Start-Process msiexec.exe -ArgumentList '/i $output /quiet' -Wait; Remove-Item $output"
+            echo Node.js installed
+          )
           
-          if (-not (Get-Command pm2 -ErrorAction SilentlyContinue)) {
-            Write-Host "Installing PM2..."
+          where pm2 >nul 2>nul
+          if %errorlevel% neq 0 (
+            echo Installing PM2...
             npm install -g pm2
-            Write-Host "PM2 installed"
-          }
+            echo PM2 installed
+          )
           
-          if (-not (Test-Path "C:\shortlink-builder")) {
-            New-Item -ItemType Directory -Path "C:\shortlink-builder" -Force
-            New-Item -ItemType Directory -Path "C:\shortlink-builder\public" -Force
-            Write-Host "App directory created"
-          }
+          if not exist "C:\shortlink-builder" (
+            mkdir C:\shortlink-builder
+            mkdir C:\shortlink-builder\public
+            echo App directory created
+          )
           
-          cd "C:\shortlink-builder"
+          cd C:\shortlink-builder
           
-          Write-Host "Downloading code..."
-          $repoUrl = "https://github.com/${{ github.repository }}/archive/main.zip"
-          Invoke-WebRequest -Uri $repoUrl -OutFile "main.zip"
-          Expand-Archive -Path "main.zip" -DestinationPath "." -Force
-          Move-Item -Path "shortlink-builder-main\*" -Destination "." -Force
-          Remove-Item "main.zip"
-          Remove-Item "shortlink-builder-main" -Recurse -Force
-          Write-Host "Code extracted"
+          echo Downloading code...
+          powershell -Command "$repoUrl = 'https://github.com/${{ github.repository }}/archive/main.zip'; Invoke-WebRequest -Uri $repoUrl -OutFile 'main.zip'; Expand-Archive -Path 'main.zip' -DestinationPath '.' -Force; Move-Item -Path 'shortlink-builder-main\*' -Destination '.' -Force; Remove-Item 'main.zip'; Remove-Item 'shortlink-builder-main' -Recurse -Force"
+          echo Code extracted
           
-          Write-Host "Installing dependencies..."
+          echo Installing dependencies...
           npm install
           
-          Write-Host "Starting app..."
+          echo Starting app...
           pm2 delete shortlink
           pm2 start server.js --name shortlink
           pm2 save
           pm2 startup
           
-          Write-Host "Configuring firewall..."
-          New-NetFirewallRule -DisplayName "Allow Node.js" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
-          New-NetFirewallRule -DisplayName "Allow HTTP" -Direction Inbound -LocalPort 80 -Protocol TCP -Action Allow
-          New-NetFirewallRule -DisplayName "Allow HTTPS" -Direction Inbound -LocalPort 443 -Protocol TCP -Action Allow
+          echo Configuring firewall...
+          powershell -Command "New-NetFirewallRule -DisplayName 'Allow Node.js' -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow"
+          powershell -Command "New-NetFirewallRule -DisplayName 'Allow HTTP' -Direction Inbound -LocalPort 80 -Protocol TCP -Action Allow"
+          powershell -Command "New-NetFirewallRule -DisplayName 'Allow HTTPS' -Direction Inbound -LocalPort 443 -Protocol TCP -Action Allow"
           
-          Write-Host "Deployment completed successfully!"
-          Write-Host "App running at: http://160.187.210.155:3000"
+          echo Deployment completed successfully!
+          echo App running at: http://160.187.210.155:3000
