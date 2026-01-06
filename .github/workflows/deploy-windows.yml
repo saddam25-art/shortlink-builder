@@ -53,10 +53,12 @@ jobs:
           cd "C:\shortlink-builder"
           
           # Download latest code
-          $repoUrl = "https://github.com/${{ github.repository }}/archive/main.tar.gz"
-          Invoke-WebRequest -Uri $repoUrl -OutFile "main.tar.gz"
-          tar -xzf "main.tar.gz" --strip-components=1
-          Remove-Item "main.tar.gz"
+          $repoUrl = "https://github.com/${{ github.repository }}/archive/main.zip"
+          Invoke-WebRequest -Uri $repoUrl -OutFile "main.zip"
+          Expand-Archive -Path "main.zip" -DestinationPath "." -Force
+          Move-Item -Path "shortlink-builder-main\*" -Destination "." -Force
+          Remove-Item "main.zip"
+          Remove-Item "shortlink-builder-main" -Recurse -Force
           
           # Install dependencies
           npm install
