@@ -64,27 +64,43 @@ app.post('/api/fetch-metadata', async (req, res) => {
 
     console.log('Fetching metadata from:', url);
 
-    // Use realistic browser User-Agent to avoid 403
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9,ms;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1'
-      },
-      timeout: 15000,
-      redirect: 'follow'
-    });
+    // Handle Facebook URLs - use Facebook crawler
+    let finalUrl = url;
+    let response;
+    
+    if (url.includes('facebook.com/share/p/') || url.includes('facebook.com/story.php')) {
+      // Use Facebook crawler for Facebook URLs
+      response = await fetch(url, {
+        headers: {
+          'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+          'Accept': '*/*'
+        },
+        timeout: 15000,
+        redirect: 'follow'
+      });
+    } else {
+      // Use realistic browser User-Agent for other URLs
+      response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9,ms;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+          'Sec-Ch-Ua-Mobile': '?0',
+          'Sec-Ch-Ua-Platform': '"Windows"',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1'
+        },
+        timeout: 15000,
+        redirect: 'follow'
+      });
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
@@ -94,17 +110,52 @@ app.post('/api/fetch-metadata', async (req, res) => {
     const $ = cheerio.load(html);
 
     // Extract OG meta tags (priority) or fallback
-    const metadata = {
-      title: $('meta[property="og:title"]').attr('content') 
+    let title = $('meta[property="og:title"]').attr('content') 
           || $('meta[name="title"]').attr('content')
           || $('title').text()
-          || '',
-      description: $('meta[property="og:description"]').attr('content')
+          || '';
+    
+    let description = $('meta[property="og:description"]').attr('content')
               || $('meta[name="description"]').attr('content')
-              || '',
-      image: $('meta[property="og:image"]').attr('content')
+              || '';
+    
+    let image = $('meta[property="og:image"]').attr('content')
           || $('meta[property="og:image:url"]').attr('content')
-          || ''
+          || '';
+    
+    // Handle Facebook-specific content
+    if (url.includes('facebook.com')) {
+      // Try to extract from structured data
+      const jsonData = $('script[type="application/ld+json"]').html();
+      if (jsonData) {
+        try {
+          const parsed = JSON.parse(jsonData);
+          if (Array.isArray(parsed)) {
+            const article = parsed.find(item => item['@type'] === 'Article' || item['@type'] === 'NewsArticle');
+            if (article) {
+              title = article.headline || title;
+              description = article.description || description;
+              image = article.image?.[0] || image;
+            }
+          }
+        } catch (e) {
+          console.log('Failed to parse structured data');
+        }
+      }
+      
+      // Fallback: try to find first image in content
+      if (!image) {
+        const firstImage = $('img').first().attr('src');
+        if (firstImage && !firstImage.includes('profile')) {
+          image = firstImage;
+        }
+      }
+    }
+    
+    const metadata = {
+      title: title || 'No title found',
+      description: description || 'No description found',
+      image: image || ''
     };
 
     // Clean up
