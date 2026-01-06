@@ -25,53 +25,52 @@ jobs:
         password: ${{ secrets.SERVER_PASSWORD }}
         port: 22
         script: |
-          # Check if Node.js is installed
+          Write-Host "Starting Windows deployment..."
+          
           if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
             Write-Host "Installing Node.js..."
-            # Download Node.js
             $url = "https://nodejs.org/dist/v20.12.2/node-v20.12.2-x64.msi"
             $output = "C:\node-installer.msi"
             Invoke-WebRequest -Uri $url -OutFile $output
-            # Install Node.js silently
             Start-Process msiexec.exe -ArgumentList "/i $output /quiet" -Wait
             Remove-Item $output
-            # Refresh PATH
             $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
+            Write-Host "Node.js installed"
           }
           
-          # Install PM2 globally
           if (-not (Get-Command pm2 -ErrorAction SilentlyContinue)) {
+            Write-Host "Installing PM2..."
             npm install -g pm2
+            Write-Host "PM2 installed"
           }
           
-          # Create app directory
           if (-not (Test-Path "C:\shortlink-builder")) {
             New-Item -ItemType Directory -Path "C:\shortlink-builder" -Force
             New-Item -ItemType Directory -Path "C:\shortlink-builder\public" -Force
+            Write-Host "App directory created"
           }
           
           cd "C:\shortlink-builder"
           
-          # Download latest code
+          Write-Host "Downloading code..."
           $repoUrl = "https://github.com/${{ github.repository }}/archive/main.zip"
           Invoke-WebRequest -Uri $repoUrl -OutFile "main.zip"
           Expand-Archive -Path "main.zip" -DestinationPath "." -Force
           Move-Item -Path "shortlink-builder-main\*" -Destination "." -Force
           Remove-Item "main.zip"
           Remove-Item "shortlink-builder-main" -Recurse -Force
+          Write-Host "Code extracted"
           
-          # Install dependencies
+          Write-Host "Installing dependencies..."
           npm install
           
-          # Stop existing app
+          Write-Host "Starting app..."
           pm2 delete shortlink
-          
-          # Start app with PM2
           pm2 start server.js --name shortlink
           pm2 save
           pm2 startup
           
-          # Configure Windows Firewall
+          Write-Host "Configuring firewall..."
           New-NetFirewallRule -DisplayName "Allow Node.js" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
           New-NetFirewallRule -DisplayName "Allow HTTP" -Direction Inbound -LocalPort 80 -Protocol TCP -Action Allow
           New-NetFirewallRule -DisplayName "Allow HTTPS" -Direction Inbound -LocalPort 443 -Protocol TCP -Action Allow
