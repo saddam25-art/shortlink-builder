@@ -143,11 +143,23 @@ app.post('/api/fetch-metadata', async (req, res) => {
         }
       }
       
-      // Fallback: try to find first image in content
+      // For Facebook, if no image found, use a placeholder or try to extract differently
       if (!image) {
-        const firstImage = $('img').first().attr('src');
-        if (firstImage && !firstImage.includes('profile')) {
-          image = firstImage;
+        // Try to find og:image from meta tags again with different selectors
+        image = $('meta[property="og:image"]').attr('content') 
+              || $('meta[name="og:image"]').attr('content')
+              || $('meta[property="og:image:url"]').attr('content')
+              || '';
+        
+        // If still no image, try to find any image with external URL
+        if (!image) {
+          $('img').each((i, elem) => {
+            const src = $(elem).attr('src');
+            if (src && src.startsWith('http') && !src.includes('profile') && !src.includes('emoji')) {
+              image = src;
+              return false; // break the loop
+            }
+          });
         }
       }
     }
@@ -243,6 +255,49 @@ app.delete('/api/links/:code', (req, res) => {
   }
 });
 
+// Image proxy endpoint for Facebook images
+app.get('/proxy-image', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).send('URL is required');
+    }
+
+    console.log('Proxying image:', url);
+    
+    // Fetch the image with proper headers
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://www.facebook.com/',
+        'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      },
+      timeout: 10000
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    // Get image data
+    const imageBuffer = await response.buffer();
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+
+    // Set proper headers
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    
+    res.send(imageBuffer);
+  } catch (error) {
+    console.error('Image proxy error:', error);
+    res.status(500).send('Failed to proxy image');
+  }
+});
+
 // SHORTLINK REDIRECT - This is the magic!
 // When Facebook crawler visits: serve HTML with OG tags
 // When user visits: redirect to Shopee (try app first, fallback to web)
@@ -296,7 +351,12 @@ app.get('/s/:code', (req, res) => {
 
     // For real users: serve redirect page that tries to open Shopee app
     // Similar to how Facebook's l.php works with "refresh" header
-    const redirectHtml = generateRedirectPage(link);
+    let imageUrl = link.image;
+    if (imageUrl && imageUrl.includes('facebook.com') && !imageUrl.includes('proxy-image')) {
+      imageUrl = `${req.protocol}://${req.get('host')}/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+    }
+    
+    const redirectHtml = generateRedirectPage(link, imageUrl);
     res.send(redirectHtml);
 
   } catch (error) {
@@ -306,7 +366,7 @@ app.get('/s/:code', (req, res) => {
 });
 
 // Generate redirect page (like Facebook's l.php)
-function generateRedirectPage(link) {
+function generateRedirectPage(link, imageUrl) {
   const finalUrl = link.destination_url;
   const deepLink = `shopee://open?url=${encodeURIComponent(finalUrl)}`;
   
@@ -319,7 +379,7 @@ function generateRedirectPage(link) {
   <meta property="og:type" content="website">
   <meta property="og:title" content="${escapeHtml(link.title || 'Shopee Product')}">
   <meta property="og:description" content="${escapeHtml(link.description || 'Klik untuk lihat di Shopee')}">
-  <meta property="og:image" content="${escapeHtml(link.image || '')}">
+  <meta property="og:image" content="${escapeHtml(imageUrl || '')}">
   <title>${escapeHtml(link.title || 'Redirecting...')}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }

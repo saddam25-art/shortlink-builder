@@ -310,12 +310,16 @@
     function updatePreview() {
       const title = els.hiddenTitle.value || 'Tajuk akan dipaparkan di sini';
       const desc = els.hiddenDesc.value || 'Deskripsi preview akan dipaparkan di sini...';
-      const image = els.hiddenImage.value;
+      let image = els.hiddenImage.value;
 
       els.previewTitle.textContent = title;
       els.previewDesc.textContent = desc;
 
       if (image) {
+        // Use proxy for Facebook images
+        if (image.includes('facebook.com') && !image.includes('/proxy-image')) {
+          image = `/proxy-image?url=${encodeURIComponent(image)}`;
+        }
         els.previewImage.innerHTML = `<img src="${image}" alt="Preview" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\\'text-gray-400 text-sm\\'>Gambar gagal dimuatkan</span>'">`;
       } else {
         els.previewImage.innerHTML = '<span class="text-gray-400 text-sm">Tiada gambar</span>';
