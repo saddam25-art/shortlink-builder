@@ -1,0 +1,73 @@
+name: Deploy to Windows Server
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Deploy to Windows Server
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: 22
+        script: |
+          # Check if Node.js is installed
+          if (!(Get-Command node -ErrorAction SilentlyContinue)) {
+            Write-Host "Installing Node.js..."
+            # Download Node.js
+            $url = "https://nodejs.org/dist/v20.12.2/node-v20.12.2-x64.msi"
+            $output = "C:\node-installer.msi"
+            Invoke-WebRequest -Uri $url -OutFile $output
+            # Install Node.js silently
+            Start-Process msiexec.exe -ArgumentList "/i $output /quiet" -Wait
+            Remove-Item $output
+            # Refresh PATH
+            $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
+          }
+          
+          # Install PM2 globally
+          if (!(Get-Command pm2 -ErrorAction SilentlyContinue)) {
+            npm install -g pm2
+          }
+          
+          # Create app directory
+          if (!(Test-Path "C:\shortlink-builder")) {
+            New-Item -ItemType Directory -Path "C:\shortlink-builder" -Force
+            New-Item -ItemType Directory -Path "C:\shortlink-builder\public" -Force
+          }
+          
+          cd "C:\shortlink-builder"
+          
+          # Download latest code
+          $repoUrl = "https://github.com/${{ github.repository }}/archive/main.tar.gz"
+          Invoke-WebRequest -Uri $repoUrl -OutFile "main.tar.gz"
+          tar -xzf "main.tar.gz" --strip-components=1
+          Remove-Item "main.tar.gz"
+          
+          # Install dependencies
+          npm install
+          
+          # Stop existing app
+          pm2 delete shortlink 2>$null
+          
+          # Start app with PM2
+          pm2 start server.js --name shortlink
+          pm2 save
+          pm2 startup
+          
+          # Configure Windows Firewall
+          New-NetFirewallRule -DisplayName "Allow Node.js" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
+          New-NetFirewallRule -DisplayName "Allow HTTP" -Direction Inbound -LocalPort 80 -Protocol TCP -Action Allow
+          New-NetFirewallRule -DisplayName "Allow HTTPS" -Direction Inbound -LocalPort 443 -Protocol TCP -Action Allow
+          
+          Write-Host "Deployment completed successfully!"
+          Write-Host "App running at: http://160.187.210.155:3000"
