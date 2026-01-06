@@ -21,7 +21,7 @@ jobs:
         port: 22
         script: |
           # Check if Node.js is installed
-          if (!(Get-Command node -ErrorAction SilentlyContinue)) {
+          if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
             Write-Host "Installing Node.js..."
             # Download Node.js
             $url = "https://nodejs.org/dist/v20.12.2/node-v20.12.2-x64.msi"
@@ -35,12 +35,12 @@ jobs:
           }
           
           # Install PM2 globally
-          if (!(Get-Command pm2 -ErrorAction SilentlyContinue)) {
+          if (-not (Get-Command pm2 -ErrorAction SilentlyContinue)) {
             npm install -g pm2
           }
           
           # Create app directory
-          if (!(Test-Path "C:\shortlink-builder")) {
+          if (-not (Test-Path "C:\shortlink-builder")) {
             New-Item -ItemType Directory -Path "C:\shortlink-builder" -Force
             New-Item -ItemType Directory -Path "C:\shortlink-builder\public" -Force
           }
@@ -57,7 +57,7 @@ jobs:
           npm install
           
           # Stop existing app
-          pm2 delete shortlink 2>$null
+          pm2 delete shortlink
           
           # Start app with PM2
           pm2 start server.js --name shortlink
